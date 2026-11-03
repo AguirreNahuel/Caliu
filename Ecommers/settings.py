@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'axes',
 
     # Mis aplicaciones
+    'core',
     'users',
     'products',
 ]
@@ -104,7 +105,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'core.wsgi.application'
+WSGI_APPLICATION = 'Ecommers.wsgi.application'
 
 
 # Database
