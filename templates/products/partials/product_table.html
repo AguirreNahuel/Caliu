@@ -1,0 +1,108 @@
+<div class="table-wrapper overflow-x-auto bg-white shadow-md rounded-lg">
+    <table class="styled-table w-full border-collapse text-left">
+        <thead class="bg-gray-100 border-b">
+            <tr>
+                <th class="p-3 text-gray-600 font-semibold">Imagen</th>
+                <th class="p-3 text-gray-600 font-semibold">Producto</th>
+                <th class="p-3 text-gray-600 font-semibold">Categoría</th>
+                <th class="p-3 text-gray-600 font-semibold">Precio</th>
+                <th class="p-3 text-gray-600 font-semibold">Stock</th>
+                <th class="p-3 text-gray-600 font-semibold">Estado</th>
+                <th class="p-3 text-gray-600 font-semibold text-center" colspan="2">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for prod in products %}
+            <tr class="border-b hover:bg-gray-50 transition-colors">
+                <!-- Imagen -->
+                <td class="p-3">
+                    {% if prod.image %}
+                        <img src="{{ prod.image.url }}" alt="{{ prod.name }}" class="w-12 h-12 object-cover rounded-md border">
+                    {% else %}
+                        <div class="w-12 h-12 bg-gray-100 rounded-md flex items-center justify-center text-xs text-gray-400 italic">Sin foto</div>
+                    {% endif %}
+                </td>
+
+                <!-- Nombre -->
+                <td class="p-3 font-medium text-gray-800">{{ prod.name }}</td>
+
+                <!-- Categoría -->
+                <td class="p-3 text-gray-600">{{ prod.category.name }}</td>
+
+                <!-- Precio -->
+                <td class="p-3 font-semibold text-gray-700">${{ prod.price }}</td>
+
+                <!-- Stock -->
+                <td class="p-3 text-gray-600">{{ prod.stock }} u.</td>
+
+                <!-- Estado -->
+                <td class="p-3">
+                    {% if prod.is_active %}
+                        <span class="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full font-semibold">Activo</span>
+                    {% else %}
+                        <span class="px-2 py-1 text-xs bg-red-100 text-red-700 rounded-full font-semibold">Inactivo</span>
+                    {% endif %}
+                </td>
+
+                <!-- Acciones -->
+                <td class="p-3 text-center">
+                    <a href="{% url 'product_update' prod.pk %}" 
+                       hx-get="{% url 'product_update' prod.pk %}" 
+                       hx-target="#main-dynamic-content"
+                       hx-push-url="true"
+                       class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm transition-colors inline-block">
+                        Editar
+                    </a>
+                </td>
+                <td class="p-3 text-center">
+                    <button class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm transition-colors"
+                            hx-post="{% url 'product_delete' prod.pk %}{% if page_obj.number %}?page={{ page_obj.number }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
+                            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                            hx-confirm="¿Estás seguro de eliminar el producto '{{ prod.name }}'?"
+                            hx-target="#product-table-container">
+                        Eliminar
+                    </button>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8" class="text-center py-6 text-gray-500 italic">No se encontraron productos registrados.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Paginación -->
+    {% if page_obj.has_other_pages %}
+    <div class="flex items-center justify-between p-4 bg-gray-50 border-t">
+        <span class="text-sm text-gray-600">
+            Mostrando página <span class="font-semibold">{{ page_obj.number }}</span> de <span class="font-semibold">{{ page_obj.paginator.num_pages }}</span>
+        </span>
+        <div class="inline-flex space-x-1">
+            {% if page_obj.has_previous %}
+                <button class="px-3 py-1 bg-white border rounded text-sm text-gray-700 hover:bg-gray-100"
+                        hx-get="{% url 'product_list' %}?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}"
+                        hx-target="#product-table-container">
+                    Anterior
+                </button>
+            {% else %}
+                <button class="px-3 py-1 bg-gray-100 border rounded text-sm text-gray-400 cursor-not-allowed" disabled>
+                    Anterior
+                </button>
+            {% endif %}
+
+            {% if page_obj.has_next %}
+                <button class="px-3 py-1 bg-white border rounded text-sm text-gray-700 hover:bg-gray-100"
+                        hx-get="{% url 'product_list' %}?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}"
+                        hx-target="#product-table-container">
+                    Siguiente
+                </button>
+            {% else %}
+                <button class="px-3 py-1 bg-gray-100 border rounded text-sm text-gray-400 cursor-not-allowed" disabled>
+                    Siguiente
+                </button>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>

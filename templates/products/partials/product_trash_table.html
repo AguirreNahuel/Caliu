@@ -1,0 +1,55 @@
+<!-- templates/products/partials/product_trash_table.html -->
+<div id="product-trash-table-container" class="table-wrapper overflow-x-auto bg-white shadow-md rounded-lg">
+    <table class="styled-table w-full border-collapse text-left">
+        <thead class="bg-gray-100 border-b">
+            <tr>
+                <th class="p-3 text-gray-600 font-semibold">Imagen</th>
+                <th class="p-3 text-gray-600 font-semibold">Producto</th>
+                <th class="p-3 text-gray-600 font-semibold">Categoría</th>
+                <th class="p-3 text-gray-600 font-semibold">Precio</th>
+                <th class="p-3 text-gray-600 font-semibold text-center">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for prod in products %}
+            <tr class="border-b hover:bg-gray-50 transition-colors">
+                <td class="p-3">
+                    {% if prod.image %}
+                        <img src="{{ prod.image.url }}" alt="{{ prod.name }}" class="w-12 h-12 object-cover rounded-md border">
+                    {% else %}
+                        <div class="w-12 h-12 bg-gray-100 rounded-md flex items-center justify-center text-xs text-gray-400 italic">Sin foto</div>
+                    {% endif %}
+                </td>
+                <td class="p-3 font-medium text-gray-800">{{ prod.name }}</td>
+                <td class="p-3 text-gray-600">{% if prod.category %}{{ prod.category.name }}{% else %}Sin categoría{% endif %}</td>
+                <td class="p-3 font-semibold text-gray-700">${{ prod.price }}</td>
+                <td class="p-3 text-center">
+                    <div class="flex items-center justify-center space-x-2">
+                        <!-- Botón para Restaurar -->
+                        <button class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm transition-colors"
+                                hx-post="{% url 'product_restore' prod.pk %}{% if page_obj.number %}?page={{ page_obj.number }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
+                                hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                                hx-confirm="¿Estás seguro de restaurar el producto '{{ prod.name }}'?"
+                                hx-target="#product-trash-table-container">
+                            Restaurar
+                        </button>
+
+                        <!-- Botón de Borrado Definitivo -->
+                        <button class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm transition-colors"
+                                hx-post="{% url 'product_permanent_delete' prod.pk %}{% if page_obj.number %}?page={{ page_obj.number }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
+                                hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                                hx-confirm="¿ESTÁS 100% SEGURO? Esta vez SÍ se va a borrar para siempre de la base de datos. No quiero mensajes a las 3:00 AM preguntando si se puede recuperar un 'ups, me equivoqué'. ¡NO SE PUEDE! ¿Procedemos?"
+                                hx-target="#product-trash-table-container">
+                            Borrar Definitivamente
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="text-center py-6 text-gray-500 italic">La papelera está vacía.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

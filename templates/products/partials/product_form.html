@@ -1,0 +1,99 @@
+<div class="max-w-2xl mx-auto bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+<!--     <div class="flex justify-between items-center mb-6 pb-4 border-b">
+        <h2 class="text-xl font-bold text-gray-800">{{ title }}</h2>
+        <a href="{% url 'product_list' %}"
+           class="text-sm text-gray-500 hover:text-gray-700"
+           hx-get="{% url 'product_list' %}"
+           hx-target="#main-dynamic-content"
+           hx-push-url="true">
+            ✕ Cancelar
+        </a>
+    </div> -->
+
+    <form method="POST" 
+          action="{{ action_url }}" 
+          enctype="multipart/form-data"
+          hx-post="{{ action_url }}" 
+          hx-encoding="multipart/form-data"
+          hx-target="#main-dynamic-content"
+          class="space-y-4">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+            <div class="p-3 bg-red-100 border border-red-300 text-red-700 rounded-lg text-sm">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del producto *</label>
+                {{ form.name }}
+                {% if form.name.errors %}
+                    <p class="text-xs text-red-500 mt-1">{{ form.name.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Categoría *</label>
+                {{ form.category }}
+                {% if form.category.errors %}
+                    <p class="text-xs text-red-500 mt-1">{{ form.category.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Precio ($) *</label>
+                {{ form.price }}
+                {% if form.price.errors %}
+                    <p class="text-xs text-red-500 mt-1">{{ form.price.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Stock Disponible *</label>
+                {{ form.stock }}
+                {% if form.stock.errors %}
+                    <p class="text-xs text-red-500 mt-1">{{ form.stock.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div class="flex items-center pt-6">
+                <label class="inline-flex items-center space-x-2 cursor-pointer">
+                    {{ form.is_active }}
+                    <span class="text-sm font-medium text-gray-700">Producto Activo</span>
+                </label>
+            </div>
+
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Descripción *</label>
+                {{ form.description }}
+                {% if form.description.errors %}
+                    <p class="text-xs text-red-500 mt-1">{{ form.description.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Imagen del Producto</label>
+                {{ form.image }}
+                {% if form.image.errors %}
+                    <p class="text-xs text-red-500 mt-1">{{ form.image.errors.0 }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="flex justify-end space-x-3 pt-6 border-t mt-6">
+            <a href="{% url 'product_list' %}"
+               class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg transition-colors"
+               hx-get="{% url 'product_list' %}"
+               hx-target="#main-dynamic-content"
+               hx-push-url="true">
+                Cancelar
+            </a>
+            <button type="submit" 
+                    class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors">
+                Guardar Producto
+            </button>
+        </div>
+    </form>
+</div>

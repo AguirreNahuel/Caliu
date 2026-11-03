@@ -1,0 +1,24 @@
+<div>
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-800">Gestión de Accesos</h2>
+        <a href="{% url 'access_create' %}" class="btn-primary bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg" hx-get="{% url 'access_create' %}" hx-target="#main-dynamic-content">
+            + Nuevo Acceso
+        </a>
+    </div>
+
+    <!-- Buscador en tiempo real -->
+    <div class="mb-6">
+        <input type="text" name="q" placeholder="Buscar por usuario, nombre de empleado o email..." 
+               value="{{ search_query }}"
+               class="form-input w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+               hx-get="{% url 'access_list' %}"
+               hx-trigger="keyup changed delay:300ms"
+               hx-target="#access-table-container"
+               autocomplete="off">
+    </div>
+
+    <!-- Contenedor de la Tabla -->
+    <div id="access-table-container">
+        {% include 'users/access/partials/access_table.html' %}
+    </div>
+</div>

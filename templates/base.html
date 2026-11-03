@@ -15,6 +15,9 @@
 
     <!-- HTMX (Local) -->
     <script src="{% static 'js/htmx.min.js' %}"></script>
+
+    <!-- HTMX Response Targets Extension -->
+    <script src="{% static 'js/response-targets.js' %}"></script>
 </head>
 <body class="min-h-screen flex flex-col antialiased"
       hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>

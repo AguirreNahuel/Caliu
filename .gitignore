@@ -6,3 +6,4 @@ venv/
 .venv/
 staticfiles/
 .DS_Store
+*.png

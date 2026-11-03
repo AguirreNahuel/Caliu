@@ -50,8 +50,12 @@ INSTALLED_APPS = [
     'django_otp',
     'django_otp.plugins.otp_totp',
 
+    # Axes (Para evitar ataques de fuerza bruta)
+    'axes',
+
     # Mis aplicaciones
     'users',
+    'products',
 ]
 
 MIDDLEWARE = [
@@ -67,6 +71,20 @@ MIDDLEWARE = [
     
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+    #Para que renderize la pantalla (No se si la dejare)
+    'users.middleware.HTMXAxesMiddleware',
+
+    #Axes Middleware
+    'axes.middleware.AxesMiddleware',
+
+
+]
+
+# Backends de autenticación requeridos por Django Axes para interceptar los intentos de login
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesBackend',
+    'django.contrib.auth.backends.ModelBackend',
 ]
 
 ROOT_URLCONF = 'core.urls'
@@ -142,6 +160,11 @@ STATICFILES_DIRS = [
 STATIC_ROOT = BASE_DIR / "staticfiles"
 #Esto es para produccion (El server)
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Media files (Archivos subidos por los usuarios / Imágenes)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 #Esto es para que Django sepa que usaremo un modelo de usuario personalizado.
 AUTH_USER_MODEL = 'users.User'
 
@@ -150,3 +173,23 @@ LOGIN_REDIRECT_URL = 'dashboard' # A dónde va tras loguearse
 LOGOUT_REDIRECT_URL = 'login'    # A dónde va tras cerrar sesión
 
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True # La sesión expira cuando el usuario cierra el navegador
+
+
+# Numero maximo de intentos fallidos antes de bloquear
+AXES_FAILURE_LIMIT = 5
+
+# Tiempo de bloqueo (en horas) despues de superar el limite, o bloquear hasta reiniciar
+AXES_COOLOFF_TIME = 1  # 1 hora de bloqueo
+
+# Bloquear por combinacion de IP y usuario (o solo por IP)
+AXES_LOCK_OUT_BY_COMBINATION_USER_IP = True
+
+# Bloquear por dirección IP independientemente del usuario (o combinaciones)
+AXES_LOCK_OUT_BY_IP = True
+
+# Permitir que los intentos fallidos con usuarios que no existen también se registren
+AXES_ENABLE_ACCESS_FAILURE_LOG = True
+
+AXES_LOCKOUT_TEMPLATE = 'users/login/lockout.html'
+
+AXES_BLOCK_BY_IP_GET = True

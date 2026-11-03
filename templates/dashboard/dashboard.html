@@ -1,4 +1,4 @@
-<!-- templates/users/dashboard/dashboard.html -->
+<!-- templates/dashboard/dashboard.html -->
 {% extends 'base.html' %}
 
 {% block title %}Panel de Administración{% endblock %}
@@ -6,13 +6,13 @@
 {% block content %}
 <div class="min-h-screen bg-gray-100 flex flex-col">
     <!-- Navbar Superior en lugar del Sidebar -->
-    {% include 'users/dashboard/partials/navbar.html' %}
+    {% include 'dashboard/partials/navbar.html' %}
 
     <!-- Contenido Principal que ocupa todo el ancho -->
     <div class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <main id="main-dynamic-content">
             {% block dashboard_content %}
-                {% include 'users/dashboard/partials/dashboard_home.html' %}
+                {% include 'dashboard/partials/dashboard_home.html' %}
             {% endblock %}
         </main>
     </div>

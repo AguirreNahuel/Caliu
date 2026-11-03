@@ -17,6 +17,8 @@ Including another URLconf
 # core/urls.py (o el archivo urls.py principal de tu proyecto)
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     # 1. Panel de administración de Django
@@ -25,4 +27,10 @@ urlpatterns = [
     # 2. Rutas de la app de usuarios (maneja /login/, /dashboard/, /Empleados/, etc.)
     path('', include('users.urls')),
 
+    # 3. Rutas de la app de productos (maneja /productos/, etc.)
+    path('', include('products.urls')),
 ]
+
+# Servir archivos de media en modo desarrollo
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

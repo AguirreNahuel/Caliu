@@ -2,7 +2,13 @@
 
 {% block content %}
 <div class="flex-grow flex items-center justify-center p-4">
-    <div class="card-container" id="login-container">
+    <!-- Contenedor principal de la tarjeta de login -->
+    <div class="card-container w-full max-w-md p-6 bg-white rounded-lg shadow-md" id="login-container">
+        
+        <!-- Contenedor exclusivo para alertas de límite de intentos / fuerza bruta (429) -->
+        <div id="rate-limit-error"></div>
+
+        <!-- Cargamos el formulario inicial del Paso 1 -->
         {% include 'users/login/partials/login_step1.html' %}
     </div>
 </div>

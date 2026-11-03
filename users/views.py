@@ -1,16 +1,18 @@
-# users/views.py
 import io
 import base64
 import qrcode
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout, load_backend
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.conf import settings
 from django.http import HttpResponse
 from django.db.models import Q
+from django.core.paginator import Paginator
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from .models import User, Employee, normalize_text
-from django.core.paginator import Paginator
-from .forms import EmployeeForm
+from .forms import EmployeeForm, UserAccessForm
+
+
 
 # ==========================================
 # VISTAS DE AUTENTICACIÓN Y 2FA (HTMX)
@@ -18,11 +20,14 @@ from .forms import EmployeeForm
 
 def login_view(request):
     """
-    Maneja el flujo de autenticación de dos pasos con HTMX:
-    - Paso 1: Valida usuario/email (del empleado) y contraseña.
-    - Evalúa 2FA (Solo obligatorio para Staff/Superuser).
+    Maneja el flujo de autenticación de dos pasos con HTMX de forma segura:
+    - Paso 1: Valida usuario/email y contraseña, regenerando la sesión.
+    - Evalúa 2FA (Obligatorio para Staff/Superuser).
     """
     if request.method == 'GET':
+        # Limpiamos cualquier rastro previo de 2FA al entrar a la vista de login
+        if 'pre_2fa_user_id' in request.session:
+            del request.session['pre_2fa_user_id']
         return render(request, 'users/login/login.html')
 
     # 1. EVALUACIÓN DE PASO 1: Credenciales
@@ -30,45 +35,48 @@ def login_view(request):
         identifier = request.POST.get('identifier', '').strip()
         password = request.POST.get('password', '')
 
-        # Buscar por username del usuario O por el email que pertenece al Employee vinculado
+        # Busco por username del usuario o por el email del empleado vinculado
         user_obj = User.objects.filter(
             Q(username__iexact=identifier) | Q(employee__email__iexact=identifier)
         ).first()
 
-        if user_obj:
-            # Usamos siempre el username real del objeto encontrado para autenticar
-            user = authenticate(request, username=user_obj.username, password=password)
-        else:
-            user = None
+        auth_username = user_obj.username if user_obj else identifier
+        user = authenticate(request, username=auth_username, password=password)
 
-        if not user:
-            return render(request, 'users/partials/login_step1.html', {
-                'error': 'Credenciales inválidas o la cuenta se encuentra desactivada.'
+        if not user or not user.is_active:
+            return render(request, 'users/login/partials/login_step1.html', {
+                'error': 'Ocurrió un error al validar los datos. Verifique la información e intente nuevamente.'
             })
 
-        # Regla de Negocio: Si NO es staff ni superuser, salta el 2FA e inicia sesión directamente
+        # PREVENCIÓN DE FIJACIÓN DE SESIÓN:
+        # Regeneramos la clave de sesión antes de iniciar cualquier flujo autenticado o semi-autenticado
+        request.session.cycle_key()
+
+        # Regla de Negocio: Si NO es staff ni superuser, salto el 2FA e inicio sesión directamente
         if not (user.is_staff or user.is_superuser):
             auth_login(request, user)
             response = HttpResponse()
             response['HX-Redirect'] = '/dashboard/'
             return response
 
-        # Guardar ID de usuario temporalmente en la sesión de preconexión 2FA
+        # Guardamos el ID de usuario de forma segura para la fase 2FA
         request.session['pre_2fa_user_id'] = user.id
 
-        # Evaluar estado de 2FA para el usuario Administrador / Staff
-        device = TOTPDevice.objects.filter(user=user, name='default').first()
+        # Buscamos si ya tiene un dispositivo TOTP confirmado
+        device = TOTPDevice.objects.filter(user=user, name='default', confirmed=True).first()
 
         # CASO A: Ya configuró 2FA previamente
-        if device and device.confirmed:
+        if device:
             return render(request, 'users/login/partials/login_step2_otp.html')
 
-        # CASO B: Primera vez / No tiene 2FA configurado
-        if not device:
-            device = TOTPDevice.objects.create(user=user, name='default', confirmed=False)
+        # CASO B: Primera vez / No tiene dispositivo confirmado
+        # Limpiamos dispositivos no confirmados previos para evitar basura o colisiones
+        TOTPDevice.objects.filter(user=user, name='default', confirmed=False).delete()
+        
+        # Creamos uno nuevo limpio
+        device = TOTPDevice.objects.create(user=user, name='default', confirmed=False)
 
         otp_uri = device.config_url
-        
         img = qrcode.make(otp_uri)
         buffer = io.BytesIO()
         img.save(buffer, format='PNG')
@@ -84,21 +92,41 @@ def login_view(request):
         user_id = request.session.get('pre_2fa_user_id')
         if not user_id:
             return render(request, 'users/login/partials/login_step1.html', {
-                'error': 'Sesión de autenticación expirada. Vuelva a ingresar sus credenciales.'
+                'error': 'La sesión 2FA ha expirado o es inválida. Por favor, vuelva a iniciar sesión.'
             })
 
-        user = User.objects.get(id=user_id)
+        try:
+            user = User.objects.get(id=user_id, is_active=True)
+        except User.DoesNotExist:
+            if 'pre_2fa_user_id' in request.session:
+                del request.session['pre_2fa_user_id']
+            return render(request, 'users/login/partials/login_step1.html', {
+                'error': 'Usuario no válido. Por favor, intente nuevamente.'
+            })
+
         otp_code = request.POST.get('otp_code', '').strip()
 
-        device = TOTPDevice.objects.filter(user=user, name='default').first()
+        # Buscamos primero uno confirmado, o el último creado
+        device = TOTPDevice.objects.filter(user=user, name='default', confirmed=True).first()
+        if not device:
+            device = TOTPDevice.objects.filter(user=user, name='default').order_by('-id').first()
         
         if device and device.verify_token(otp_code):
             if not device.confirmed:
                 device.confirmed = True
                 device.save()
 
+            # Asignamos el backend activo al usuario (necesario por múltiples backends)
+            for backend_path in settings.AUTHENTICATION_BACKENDS:
+                backend = load_backend(backend_path)
+                if hasattr(backend, 'get_user') and backend.get_user(user.pk):
+                    user.backend = backend_path
+                    break
+
+            # Iniciamos sesión oficialmente en Django
             auth_login(request, user)
             
+            # Limpiamos la variable temporal de 2FA de la sesión
             if 'pre_2fa_user_id' in request.session:
                 del request.session['pre_2fa_user_id']
 
@@ -107,13 +135,15 @@ def login_view(request):
             return response
 
         context = {'error': 'El código ingresado es incorrecto o ha expirado.'}
+        
+        # Si todavía no estaba confirmado, regeneramos el QR para que pueda reintentar
         if device and not device.confirmed:
             otp_uri = device.config_url
             img = qrcode.make(otp_uri)
             buffer = io.BytesIO()
             img.save(buffer, format='PNG')
             context['qr_code'] = base64.b64encode(buffer.getvalue()).decode('utf-8')
-            return render(request, 'users/login/partials/login_step2_qr.html', context)
+            return render(request, 'users/login/partials/login_step2_otp.html', context)
 
         return render(request, 'users/login/partials/login_step2_otp.html', context)
 
@@ -142,10 +172,10 @@ def dashboard_view(request):
 
     # SI ES UNA PETICIÓN HTMX -> Devuelve ÚNICAMENTE el fragmento de tarjetas (sin sidebar)
     if request.headers.get('HX-Request'):
-        return render(request, 'users/dashboard/partials/dashboard_home.html', context)
+        return render(request, 'dashboard/partials/dashboard_home.html', context)
 
     # SI ES RECARGA (F5) O URL DIRECTA -> Devuelve el dashboard completo con su sidebar
-    return render(request, 'users/dashboard/dashboard.html', context)
+    return render(request, 'dashboard/dashboard.html', context)
 
 @login_required
 def employee_list(request):
@@ -184,6 +214,7 @@ def employee_list(request):
 
 @login_required
 def employee_create(request):
+    error = None
     if request.method == 'POST':
         form = EmployeeForm(request.POST)
         if form.is_valid():
@@ -191,10 +222,17 @@ def employee_create(request):
             response = HttpResponse()
             response['HX-Redirect'] = '/empleados/'
             return response
+        else:
+            error = 'No se pudo guardar la información. Por favor, verifique los datos ingresados.'
     else:
         form = EmployeeForm()
 
-    context = {'form': form, 'action_url': '/empleados/nuevo/', 'title': 'Nuevo Empleado'}
+    context = {
+        'form': form,
+        'action_url': '/empleados/nuevo/',
+        'title': 'Nuevo Empleado',
+        'error': error
+    }
     
     if request.headers.get('HX-Request'):
         return render(request, 'users/employees/partials/employee_form.html', context)
@@ -204,6 +242,7 @@ def employee_create(request):
 @login_required
 def employee_update(request, pk):
     employee = get_object_or_404(Employee, pk=pk)
+    error = None
     
     if request.method == 'POST':
         form = EmployeeForm(request.POST, instance=employee)
@@ -212,10 +251,17 @@ def employee_update(request, pk):
             response = HttpResponse()
             response['HX-Redirect'] = '/empleados/'
             return response
+        else:
+            error = 'No se pudieron actualizar los cambios. Por favor, verifique los datos ingresados.'
     else:
         form = EmployeeForm(instance=employee)
 
-    context = {'form': form, 'action_url': f'/empleados/{pk}/editar/', 'title': 'Editar Empleado'}
+    context = {
+        'form': form,
+        'action_url': f'/empleados/{pk}/editar/',
+        'title': 'Editar Empleado',
+        'error': error
+    }
     
     if request.headers.get('HX-Request'):
         return render(request, 'users/employees/partials/employee_form.html', context)
@@ -243,3 +289,125 @@ def employee_delete(request, pk):
         return response
 
     return render(request, 'users/employees/partials/employee_form_modal.html')
+
+
+# ------------------------------------------
+# VISTAS DE GESTIÓN Y CRUD ACCESOS (USUARIOS)
+# ------------------------------------------
+
+def is_superuser(user):
+    return user.is_authenticated and user.is_superuser
+
+@login_required
+@user_passes_test(is_superuser)
+def access_list(request):
+    search_query = request.GET.get('q', '').strip()
+    queryset = User.objects.filter(is_deleted=False).select_related('employee')
+
+    if search_query:
+        queryset = queryset.filter(
+            Q(username__icontains=search_query) |
+            Q(employee__first_name__icontains=search_query) |
+            Q(employee__last_name__icontains=search_query) |
+            Q(employee__email__icontains=search_query)
+        )
+
+    paginator = Paginator(queryset, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'users': page_obj,
+        'page_obj': page_obj,
+        'search_query': search_query,
+    }
+
+    if request.headers.get('HX-Request'):
+        if 'q' in request.GET or 'page' in request.GET:
+            return render(request, 'users/access/partials/access_table.html', context)
+        return render(request, 'users/access/access_list.html', context)
+
+    return render(request, 'users/access/access_list_page.html', context)
+
+
+@login_required
+@user_passes_test(is_superuser)
+def access_create(request):
+    error = None
+    if request.method == 'POST':
+        form = UserAccessForm(request.POST)
+        if not request.POST.get('password'):
+            form.add_error('password', 'Debe ingresar una contraseña para el nuevo usuario.')
+
+        if form.is_valid():
+            form.save()
+            response = HttpResponse()
+            response['HX-Redirect'] = '/accesos/'
+            return response
+        else:
+            error = 'No se pudo guardar la información. Por favor, verifique los datos.'
+    else:
+        form = UserAccessForm()
+
+    context = {
+        'form': form,
+        'action_url': '/accesos/nuevo/',
+        'title': 'Nuevo Acceso / Usuario',
+        'error': error
+    }
+
+    if request.headers.get('HX-Request'):
+        return render(request, 'users/access/partials/access_form.html', context)
+    return render(request, 'users/access/access_form_page.html', context)
+
+
+@login_required
+@user_passes_test(is_superuser)
+def access_update(request, pk):
+    user_obj = get_object_or_404(User, pk=pk)
+    error = None
+
+    if request.method == 'POST':
+        form = UserAccessForm(request.POST, instance=user_obj)
+        if form.is_valid():
+            form.save()
+            response = HttpResponse()
+            response['HX-Redirect'] = '/accesos/'
+            return response
+        else:
+            error = 'No se pudieron actualizar los cambios. Por favor, verifique los datos.'
+    else:
+        form = UserAccessForm(instance=user_obj)
+
+    context = {
+        'form': form,
+        'action_url': f'/accesos/{pk}/editar/',
+        'title': 'Editar Acceso / Usuario',
+        'error': error
+    }
+
+    if request.headers.get('HX-Request'):
+        return render(request, 'users/access/partials/access_form.html', context)
+    return render(request, 'users/access/access_form_page.html', context)
+
+
+@login_required
+@user_passes_test(is_superuser)
+def access_delete(request, pk):
+    user_obj = get_object_or_404(User, pk=pk)
+    if request.method == 'POST':
+        user_obj.is_deleted = True
+        user_obj.save()
+
+        if request.headers.get('HX-Request'):
+            queryset = User.objects.filter(is_deleted=False).select_related('employee')
+            paginator = Paginator(queryset, 10)
+            page_number = request.GET.get('page')
+            page_obj = paginator.get_page(page_number)
+            return render(request, 'users/access/partials/access_table.html', {'users': page_obj, 'page_obj': page_obj})
+
+        response = HttpResponse()
+        response['HX-Redirect'] = '/accesos/'
+        return response
+
+    return HttpResponse(status=405)

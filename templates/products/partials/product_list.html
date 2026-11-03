@@ -1,0 +1,48 @@
+<!-- templates/products/partials/product_list.html -->
+<div class="space-y-6">
+    <!-- Encabezado -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Gestión de Productos</h1>
+            <p class="text-sm text-gray-500">Administra el inventario y catálogo de productos</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <!-- Botón de Papelera exclusivo para Superusuarios con HTMX -->
+            {% if request.user.is_superuser %}
+                <a href="{% url 'product_trash_list' %}"
+                   class="inline-flex items-center justify-center px-4 py-2.5 bg-gray-600 hover:bg-gray-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-all"
+                   hx-get="{% url 'product_trash_list' %}"
+                   hx-target="#main-dynamic-content"
+                   hx-push-url="true">
+                    Papelera
+                </a>
+            {% endif %}
+
+            <a href="{% url 'product_create' %}"
+               class="inline-flex items-center justify-center px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-all"
+               hx-get="{% url 'product_create' %}"
+               hx-target="#main-dynamic-content"
+               hx-push-url="true">
+                + Nuevo Producto
+            </a>
+        </div>
+    </div>
+
+    <!-- Buscador en tiempo real con HTMX -->
+    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+        <input type="text" 
+               name="q" 
+               value="{{ search_query }}"
+               placeholder="Buscar por nombre, categoría o descripción..." 
+               class="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+               hx-get="{% url 'product_list' %}"
+               hx-trigger="keyup changed delay:300ms"
+               hx-target="#product-table-container"
+               autocomplete="off">
+    </div>
+
+    <!-- Tabla parcial -->
+    <div id="product-table-container">
+        {% include 'products/partials/product_table.html' %}
+    </div>
+</div>

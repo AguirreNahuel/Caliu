@@ -1,0 +1,75 @@
+<div class="max-w-xl mx-auto bg-white p-6 shadow-md rounded-lg">
+    <h2 class="text-2xl font-bold text-gray-800 mb-6">{{ title }}</h2>
+
+    {% if error %}
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 text-sm">
+            {{ error }}
+        </div>
+    {% endif %}
+
+    <form method="POST" action="{{ action_url }}" 
+          hx-post="{{ action_url }}" 
+          hx-target="#main-dynamic-content" 
+          class="space-y-4">
+        {% csrf_token %}
+        
+        {{ form.non_field_errors }}
+
+        <!-- Nombre de usuario -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.username.label }}</label>
+            {{ form.username }}
+            {% if form.username.errors %}
+                <span class="text-xs text-red-500 mt-1 block">{{ form.username.errors.0 }}</span>
+            {% endif %}
+        </div>
+
+        <!-- Contraseña -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.password.label }}</label>
+            {{ form.password }}
+            {% if form.password.errors %}
+                <span class="text-xs text-red-500 mt-1 block">{{ form.password.errors.0 }}</span>
+            {% endif %}
+        </div>
+
+        <hr class="my-4 border-gray-200">
+
+        <!-- Checkboxes de Estado y Permisos -->
+        <div class="space-y-3">
+            <div class="flex items-center space-x-2">
+                {{ form.is_active }}
+                <label for="{{ form.is_active.id_for_label }}" class="text-sm font-medium text-gray-700 cursor-pointer">
+                    {{ form.is_active.label }}
+                </label>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                {{ form.is_staff }}
+                <label for="{{ form.is_staff.id_for_label }}" class="text-sm font-medium text-gray-700 cursor-pointer">
+                    {{ form.is_staff.label }}
+                </label>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                {{ form.is_superuser }}
+                <label for="{{ form.is_superuser.id_for_label }}" class="text-sm font-medium text-gray-700 cursor-pointer">
+                    {{ form.is_superuser.label }}
+                </label>
+            </div>
+        </div>
+
+        <!-- Botones de Acción -->
+        <div class="flex justify-end space-x-3 pt-4 border-t border-gray-100">
+            <a href="{% url 'employee_list' %}" 
+               class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+               hx-get="{% url 'employee_list' %}"
+               hx-target="#main-dynamic-content">
+                Cancelar
+            </a>
+            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                {% if user_instance %}Guardar Cambios{% else %}Crear Accesos{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
