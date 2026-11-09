@@ -1,0 +1,58 @@
+[
+    {
+        "id": "inicial",
+        "nombre": "Digitalización Esenciaaaaaal",
+        "badge": "Inicial",
+        "descripcion": "Ideal para pequeños negocios o profesionales que recién dan el salto, necesitan ordenar sus registros básicos y tener presencia digital.",
+        "precio": "A consultar",
+        "caracteristicas": [
+            "Landing page o sitio web institucional moderno",
+            "Dashboard básico adaptado a tu rubro",
+            "Control operativo y registro diario",
+            "Soporte por correo electrónico",
+            "Nea"
+        ],
+        "no_incluye": [
+            "Cuentas de empleados por roles",
+            "Seguridad avanzada TOTP"
+        ],
+        "destacado": false,
+        "btn_texto": "Consultar Plan Inicial",
+        "btn_url": "#contacto"
+    },
+    {
+        "id": "profesional",
+        "nombre": "Gestión y Control Total",
+        "badge": "Más Popular",
+        "descripcion": "Diseñado para negocios con equipos de trabajo, empleados o sucursales que necesitan delegar con seguridad absoluta.",
+        "precio": "A consultar",
+        "caracteristicas": [
+            "Todo lo incluido en el plan inicial",
+            "Dashboard avanzado y personalizado",
+            "Cuentas de usuario con roles y permisos específicos",
+            "Seguridad avanzada con Doble Factor (TOTP)",
+            "Papelera y eliminación lógica (Soft Delete)"
+        ],
+        "no_incluye": [],
+        "destacado": true,
+        "btn_texto": "Quiero Gestionar mi Negocio",
+        "btn_url": "#contacto"
+    },
+    {
+        "id": "custom",
+        "nombre": "A Medida / Modular",
+        "badge": "Corporativo",
+        "descripcion": "Para empresas con operaciones complejas o requerimientos muy particulares que escapan a un paquete cerrado.",
+        "precio": "Personalizado",
+        "caracteristicas": [
+            "Arquitectura modular adaptable",
+            "Selección de módulos a medida",
+            "Integraciones y flujos customizados",
+            "Soporte técnico prioritario"
+        ],
+        "no_incluye": [],
+        "destacado": false,
+        "btn_texto": "Armar mi Solución",
+        "btn_url": "#contacto"
+    }
+]

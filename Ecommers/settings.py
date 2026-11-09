@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 from pathlib import Path
 import environ
 import os
+import urllib.parse
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -33,6 +34,22 @@ SECRET_KEY = env('SECRET_KEY')
 DEBUG = env('DEBUG')
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS')
+
+#Importacion del numero de telefono desde el .env, además de uno defauld en caso de que no se cargue nada en el .env
+#(Prefiero dejarlo en el .env y no directamente porque es un dato sensible que no debe filtrarse en git)
+WHATSAPP_NUMBER = "".join(
+    filter(str.isdigit, env('WHATSAPP_NUMBER', default='5491112345678'))
+)
+
+# Mensaje por defecto a la hora de contactar
+raw_message = env(
+    'WHATSAPP_DEFAULT_MESSAGE',
+    default='¡Hola! Quisiera obtener información sobre las soluciones digitales para mi negocio.',
+)
+
+# Codificamos el mensaje para que sea válido en una URL (convierte espacios a %20, etc.)
+WHATSAPP_DEFAULT_MESSAGE = urllib.parse.quote(raw_message)
+
 
 
 # Application definition
@@ -88,7 +105,7 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
 
-ROOT_URLCONF = 'core.urls'
+ROOT_URLCONF = 'Ecommers.urls'
 
 TEMPLATES = [
     {
